@@ -324,276 +324,360 @@ footer>a:hover {
         width: 12em;
     }
 }
-</style>
+</style><!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>CodePen - Untitled</title>
+  <link rel="canonical" href="https://codepen.io/Natald/pen/VwJojmo">
+  <style>
+    /* Estilos CSS aquí */
+  </style>
 </head>
 
 <body>
-  <hgroup>
-    <h1><a href="?#" title="Click para cambiar de color"><span>Compartir</span> Historias</a></h1>
-    <h2>Comparte tus historias con el mundo</h2>
-  </hgroup>
+  <!-- Inpirado en el proyecto de @LeaVerou + https://twitter.com/tweeplusapp -->
+  <!DOCTYPE html>
+  <html lang="es-MX">
 
-  <form action="https://twitter.com/intent/tweet" target="_blank">
-    <input type="text" id="title" placeholder="Título de tu historia" required>
-    <textarea maxlength="2000" placeholder="Escribe tu historia aquí" required></textarea>
-    <input type="hidden" name="text" />
-    <button type="submit">Compartir en Twitter</button>
-    <p class="counters">
-      <span id="counter">0</span> caracteres,
-      <span id="counter-encoded">0</span> codificados
-    </p>
-  </form>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <title>Tweet</title>
+    <link rel="shortcut icon" href="img/favicon.png" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
 
-  <footer>
-    <a href="">Soporte del Navegador</a> +
-  </footer>
+  <body>
+    <hgroup>
+      <h1><a href="?#" title="Click para cambiar de color"><span>twee</span>+</a></h1>
+      <h2>Longer tweets, no strings attached</h2>
+    </hgroup>
 
-  <script src="api.js"></script>
-  <script src="tweeplus.js">
+    <form action="https://twitter.com/intent/tweet" target="_blank">
+      <input type="text" id="title" placeholder="Título de la historia" required />
+      <textarea maxlength="2000" placeholder="Escribe tu historia aquí" required></textarea>
+      <input type="hidden" name="text" />
+      <button type="submit">Compartir en Twitter</button>
+      <p class="counters">
+        <span id="counter">0</span> characters,
+        <span id="counter-encoded">0</span> encoded
+      </p>
+      <div id="reply" class="reply">
+        <label>
+          In reply to
+          <input type="url" id="reply-url" placeholder="Tweet URL" />
+        </label>
+        <input type="hidden" name="in_reply_to" id="in_reply_to" value="" />
+        <p class="tooltip"><strong>It looks like you’re trying to post a reply.</strong> It’s much better if you paste the tweet URL in this field instead, so that it’s linked to the tweet you’re replying to. The @-mention in the beginning will be added automatically.</p>
+      </div>
+      <p id="links" class="links"></p>
+    </form>
 
-// 
+    <footer>
+      <a href="">Browser support</a> +
+    </footer>
 
-function $(id) { return document.getElementById(id); }
-function $t(tag, con) { return (con || document).getElementsByTagName(tag); }
+    <script src="api.js"></script>
+    <script src="tweeplus.js"></script>
+    <script>
+      // ttweeplus
 
-// Cache DOM lookups, for performance
-var mobile = /i(Phone|Pad)/i.test(navigator.userAgent), // mobile devices I could get my hands on...
-    form = document.forms[0],
-    textarea = $t('textarea')[0],
-    textInput = form.elements.text,
-    counter = $('counter'),
-    counterEncoded = $('counter-encoded'),
-    titleInput = $('title');
+      function $(id) { return document.getElementById(id); }
+      function $t(tag, con) { return (con || document).getElementsByTagName(tag); }
 
-document.onmousemove = function(evt) {
-    var x = ~~(100/innerWidth * evt.clientX),
-        y = ~~(100/innerHeight * evt.clientY);
+      // Cache DOM lookups, for performance
+      var mobile = /i(Phone|Pad)/i.test(navigator.userAgent), // mobile devices I could get my hands on...
+        form = document.forms[0],
+        textarea = $t('textarea')[0],
+        textInput = form.elements.text,
+        counter = $('counter'),
+        counterEncoded = $('counter-encoded'),
+        linksContainer = $('links'),
+        replyURL = $('reply-url'),
+        titleInput = $('title');
 
-    document.body.style.backgroundImage = 'radial-gradient(at ' + x + '% ' + y + '%, transparent, black)';
-};
+      document.onmousemove = function (evt) {
+        var x = ~~(100 / innerWidth * evt.clientX),
+          y = ~~(100 / innerHeight * evt.clientY);
 
-var encodingFactor = 0;
+        document.body.style.backgroundImage = 'radial-gradient(at ' + x + '% ' + y + '%, transparent, black)';
+      };
 
-textarea.oninput = textarea.onkeyup = function(e) {
-    if(e && e.type === 'input' && textarea.onkeyup) {
-        textarea.onkeyup = null;
-    }
+      var encodingFactor = 0;
 
-    var text = textarea.value,
-        length = text.length;
+      textarea.oninput = textarea.onkeyup = function (e) {
+        if (e && e.type === 'input' && textarea.onkeyup) {
+          textarea.onkeyup = null;
+        }
 
-    // Update counters
-    counter.innerHTML = length;
+        var text = textarea.value,
+          length = text.length;
 
-    // Estimate encoded length
-    var encodedEstimate = ~~(length * encodingFactor);
+        // Update counters
+        counter.innerHTML = length;
 
-    counterEncoded.innerHTML = 'around ' + encodedEstimate;
+        // Estimate encoded length
+        var encodedEstimate = ~~(length * encodingFactor);
 
-    // Adjust textarea size
-    !mobile && adjustSize();
-};
+        counterEncoded.innerHTML = 'around ' + encodedEstimate;
 
-textarea.onblur = function() {
-    var text = textarea.value,
-        length = text.length,
-        encoded = Tweeplus.encode(text);
+        // Adjust textarea size
+        !mobile && adjustSize();
 
-    hash('#' + encoded);
+        // Extract users & hashtags info
+        var links = Tweeplus.links(text);
 
-    adjustSize();
+        for (var i = links.length - 1; i >= 0; i--) {
+          links[i] = Tweeplus.linkify(links[i]);
+        }
 
-    // Update encoded counter
-    counterEncoded.innerHTML = encoded.length;
+        linksContainer.innerHTML = links.join(' ');
 
-    encodingFactor = encoded.length / text.length;
+        // Does it look like a reply?
+        if (links.length && !replyURL.value && text.charAt(0) === '@') {
+          textarea.className = 'possible-atreply';
+        }
+        else if (textarea.className) {
+          textarea.className = ''
+        }
+      };
 
-    counterEncoded.className = encoded.length > 2000? 'over-limit' : '';
+      textarea.onblur = function () {
+        var text = textarea.value,
+          length = text.length,
+          encoded = Tweeplus.encode(text);
 
-    // Generate short tweet
-    textInput.value = Tweeplus.tweet(text, titleInput.value || '');
-};
+        hash('#' + encoded);
 
-/* Stuff done on page load */
-(onhashchange = function() {
-    var decoded = Tweeplus.decode(hash());
+        adjustSize();
 
-    if (textarea.value !== decoded) {
-        textarea.value = decoded;
-    }
+        // Update encoded counter
+        counterEncoded.innerHTML = encoded.length;
 
-    textarea.oninput();
-    textarea.onblur();
-})();
+        encodingFactor = encoded.length / text.length;
 
-form.onsubmit = function () {
-    textarea.onblur(); // Just in case
-};
+        counterEncoded.className = encoded.length > 2000 ? 'over-limit' : '';
 
-/**
- * Helper functions
- */
-function adjustSize() {
-    var length = textarea.value.length;
+        // Generate short tweet
+        textInput.value = Tweeplus.tweet(text, replyURL.value || '');
 
-    textarea.rows = ~~(length/80) || 1;
+      };
 
-    do {
-        textarea.rows += 2;
+      /* Stuff done on page load */
+      if (location.search) {
+        var reply = (location.search.match(/(?:\?|&)in_reply_to=([^&]+)/i) || [])[1];
 
-        var height = textarea.offsetHeight;
-    } while (height && height < textarea.scrollHeight && textarea.rows < length);
+        if (reply) {
+          replyURL.value = decodeURIComponent(reply);
+        }
+      }
 
-    textarea.rows++;
-}
+      (onhashchange = function () {
+        var decoded = Tweeplus.decode(hash());
 
-function hash(hash) {
-    if (!hash) {
-        // location.hash is automatically decoded in FF
-        return (location.href.match(/#(.+$)/) || [,''])[1];
-    }
-    else if (history.pushState) {
-        history.pushState(null, null, hash.indexOf('#') === 0? hash : '#' + hash);
-    }
-    else {
-        location.hash = hash;
-    }
-}
+        if (textarea.value !== decoded) {
+          textarea.value = decoded;
+        }
 
-// api
+        textarea.oninput();
+        textarea.onblur();
+      })();
 
-Tweeplus = (function() {
+      form.onsubmit = function () {
+        textarea.onblur(); // Just in case
 
-    var apig = document.createElement('a');
+        updateReply();
 
-    var self, private = {
-        remove: function(arr, remarr) {
+        // Generate the tweet with title, text, username, and hashtag
+        var title = titleInput.value.trim();
+        var text = textarea.value.trim();
+        var tweet = `${title} ${text} @xiibertravel #RelatosGay`;
+
+        textInput.value = tweet;
+      };
+
+      replyURL.onfocus = function () {
+        this.select();
+      };
+
+      /**
+       * Helper functions
+       */
+      function updateReply() {
+        var inReply = $('in_reply_to');
+
+        inReply.value = replyURL.value ? (replyURL.value.match(/\/status\/(\d{3,})$/i) || [, ''])[1] : '';
+        inReply.disabled = !inReply.value;
+      }
+
+      function adjustSize() {
+        var length = textarea.value.length;
+
+        textarea.rows = ~~(length / 80) || 1;
+
+        do {
+          textarea.rows += 2;
+
+          var height = textarea.offsetHeight;
+        } while (height && height < textarea.scrollHeight && textarea.rows < length);
+
+        textarea.rows++;
+      }
+
+      if (!mobile) {
+        onresize = adjustSize;
+      }
+
+      function hash(hash) {
+        if (!hash) {
+          // location.hash is automatically decoded in FF
+          return (location.href.match(/#(.+$)/) || [, ''])[1];
+        }
+        else if (history.pushState) {
+          history.pushState(null, null, hash.indexOf('#') === 0 ? hash : '#' + hash);
+        }
+        else {
+          location.hash = hash;
+        }
+      }
+
+      //})();
+
+      // api
+
+      Tweeplus = (function () {
+
+        var apig = document.createElement('a');
+
+        var self, private = {
+          remove: function (arr, remarr) {
             if (!arr || !arr.length || !remarr || !remarr.length) {
-                return arr;
+              return arr;
             }
 
             var o = private.objectize(arr);
 
             for (var i = 0; i < remarr.length; i++) {
-                delete o[remarr[i]];
+              delete o[remarr[i]];
             }
 
             return private.arrayize(o);
-        },
+          },
 
-        objectize: function(arr) {
+          objectize: function (arr) {
             var o = {},
-                l = arr.length;
+              l = arr.length;
 
             for (i = 0; i < l; i += 1) {
-                o[arr[i]] = arr[i];
+              o[arr[i]] = arr[i];
             }
 
             return o;
-        },
+          },
 
-        arrayize: function(o) {
+          arrayize: function (o) {
             var r = [];
 
             for (var i in o) {
-                r.push(o[i]);
+              r.push(o[i]);
             }
 
             return r;
-        },
+          },
 
-        unique: function(arr) {
+          unique: function (arr) {
             return private.arrayize(private.objectize(arr));
-        }
-    };
+          }
+        };
 
-    return self = {
-        encode: function(text) {
+        return self = {
+          encode: function (text) {
             return encodeURIComponent(trim(text))
-                .replace(/'/g, '%27')
-                .replace(/\(/g, '%28')
-                .replace(/\)/g, '%29')
-                .replace(/\*/g, '%2A')
-                .replace(/\./g, '%2E')
-                .replace(/~/g, '%7E')
+              .replace(/'/g, '%27')
+              .replace(/\(/g, '%28')
+              .replace(/\)/g, '%29')
+              .replace(/\*/g, '%2A')
+              .replace(/\./g, '%2E')
+              .replace(/~/g, '%7E')
 
-            .replace(/%20/g, '+');
-        },
+              .replace(/%20/g, '+');
+          },
 
-        decode: function(text) {
+          decode: function (text) {
             try {
-                return decodeURIComponent(text.replace(/\+/g, '%20'));
+              return decodeURIComponent(text.replace(/\+/g, '%20'));
             } catch (e) {
-                return 'Does not compute :(';
+              return 'Does not compute :(';
             }
-        },
+          },
 
-        // Get mentions, hashtags, URLs
-        links: function(text) {
+          // Get mentions, hashtags, URLs
+          links: function (text) {
             return private.unique(text.match(/(@\w{1,20}|(https?|ftps?):\/\/\w[\w._\+%#\/-]+|#\w+)/gi) || []);
-        },
+          },
 
-        // Get mentions only
-        mentions: function(text) {
+          // Get mentions only
+          mentions: function (text) {
             return private.unique(text.match(/@\w{1,20}/g) || []);
-        },
+          },
 
-        // Pass in an @mention, #hashtag or URL, get an HTML link
-        linkify: function(name) {
+          // Pass in an @mention, #hashtag or URL, get an HTML link
+          linkify: function (name) {
             var ret = ['<a target="_blank" href="'],
-                twitter = 'http://twitter.com/',
-                ame = name.slice(1);
+              twitter = 'http://twitter.com/',
+              ame = name.slice(1);
 
             if (name.charAt(0) === '@') {
-                ret.push(twitter, ame, '"><img src="', twitter, '/api/users/profile_image?screen_name=', ame, '&amp;size=mini" />', name);
+              ret.push(twitter, ame, '"><img src="', twitter, '/api/users/profile_image?screen_name=', ame, '&amp;size=mini" />', name);
             } else if (name.charAt(0) === '#') {
-                // Hashtag
-                ret.push(twitter, 'search?q=%23', ame, '">', name);
+              // Hashtag
+              ret.push(twitter, 'search?q=%23', ame, '">', name);
             } else if (/^(https?|ftps?):\/\//i.test(name)) {
-                ret.push(name,
-                    name.length > 30 ? '" title="' + name + '">' + name.slice(0, 30) + '…' : '">' + name
-                );
+              ret.push(name,
+                name.length > 30 ? '" title="' + name + '">' + name.slice(0, 30) + '…' : '">' + name
+              );
             }
 
             ret.push('</a>');
 
             return ret.join('');
-        },
+          },
 
-        tweet: function(text, title) {
+          tweet: function (text, replyURL) {
             if (text.length > 140) {
-                text = text.trim ? text.trim() : text.replace(/^\s+|\s+$/g, '');
+              text = text.trim ? text.trim() : text.replace(/^\s+|\s+$/g, '');
 
-                var username = '@xiibertravel',
-                    hashtag = '#RelatosGay',
-                    cutoff = 114 - (username ? username.length + 2 : 0) - (hashtag ? hashtag.length + 1 : 0), // initial cut-off point
-                    summary,
-                    mentions = self.mentions(text),
-                    previousLength = mentions.length + 1;
+              var username = replyURL ? (replyURL.match(/\/(\w+)\/status\//i) || [, ''])[1] : '',
+                cutoff = 114 - (username ? username.length + 2 : 0), // initial cut-off point
+                summary,
+                mentions = self.mentions(text),
+                previousLength = mentions.length + 1;
 
-                while (mentions.length < previousLength) {
-                    summary = text.slice(0, cutoff - (mentions.length ? mentions.join(' ').length + 1 : 0));
-                    previousLength = mentions.length;
-                    mentions = private.remove(mentions, self.mentions(summary));
-                }
+              while (mentions.length < previousLength) {
+                summary = text.slice(0, cutoff - (mentions.length ? mentions.join(' ').length + 1 : 0));
+                previousLength = mentions.length;
+                mentions = private.remove(mentions, self.mentions(summary));
+              }
 
-                apig.href = location.href;
+              apig.href = location.href;
 
-                return title + ' ' + summary + '[…] ' + apig.href + ' ' + username + ' ' + hashtag + (mentions.length ? ' ' + mentions.join(' ') : '');
+              apig.search = replyURL ? 'in_reply_to=' + replyURL : '';
+
+              return summary + '[…] ' + apig.href + (mentions.length ? ' ' + mentions.join(' ') : '');
             } else {
-                return title + ' ' + text + ' ' + '@xiibertravel #RelatosGay';
+              return text;
             }
+          }
+        };
+
+        function trim(text) {
+          return text && (text.trim ? text.trim() : text.replace(/^\s+|\s+$/g, ''));
         }
-    };
 
-    function trim(text) {
-        return text && (text.trim ? text.trim() : text.replace(/^\s+|\s+$/g, ''));
-    }
-
-})();
-</script>
-</body>
+      })();
+    </script>
+  </body>
 
 </html>
-
-
